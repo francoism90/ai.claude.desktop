@@ -2,10 +2,8 @@
 #
 # Launcher used inside the Flatpak sandbox.
 #
-# zypak-wrapper comes from org.electronjs.Electron2.BaseApp. It intercepts
-# Chromium's zygote and sandbox calls and maps them onto the Flatpak sandbox,
-# so the app keeps a real renderer sandbox without the setuid chrome-sandbox
-# helper, and without --no-sandbox.
+# EXPERIMENT (branch experiment/drop-zypak): skip zypak-wrapper and run with
+# --no-sandbox instead. See README.md for why and the security trade-off.
 #
 # Electron writes scratch files, including the Claude Code terminal's, into
 # TMPDIR. Point it at the per-app runtime directory so nothing leaks into a
@@ -37,4 +35,4 @@ else
     echo "claude-desktop: host portal unreachable, Claude Code stays in the sandbox" >&2
 fi
 
-exec zypak-wrapper /app/extra/claude-desktop "$@"
+exec /app/extra/claude-desktop --no-sandbox "$@"
