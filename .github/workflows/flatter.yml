@@ -31,9 +31,18 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Install SDK Extensions
+      - name: Install Flatpak Dependencies
+        # The freedesktop Flatter image ships the Platform/Sdk but not
+        # extensions or base apps our manifest needs: the golang extension
+        # (to build host-spawn) and the Electron BaseApp (our `base:`,
+        # providing zypak). flatpak-builder doesn't auto-install either -
+        # unlike a local `--install-deps-from=flathub` build, Flatter's own
+        # flatpak-builder invocation has no such flag, so both must already
+        # be present before "Build Packages" runs.
         run: |
-          flatpak install --noninteractive flathub org.freedesktop.Sdk.Extension.golang//25.08
+          flatpak install --noninteractive flathub \
+            org.freedesktop.Sdk.Extension.golang//25.08 \
+            org.electronjs.Electron2.BaseApp//25.08
 
       - name: Build Packages
         uses: andyholmes/flatter@main
