@@ -1,0 +1,14 @@
+.DS_Store
+.flatpak-builder/
+*.flatpak
+*.key
+*.swo
+*.swp
+*~
+build-dir/
+dist/repo
+flatpak_app/
+flatter-keyring/
+private.key
+repo/
+Thumbs.db

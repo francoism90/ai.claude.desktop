@@ -1,0 +1,23 @@
+# Ensure consistent line endings for shell scripts and text files
+* text=auto eol=lf
+
+# Shell scripts must always use LF
+*.sh text eol=lf
+bin/* text eol=lf
+
+# Manifests and config
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
+*.desktop text eol=lf
+*.ini text eol=lf
+*.flatpakrepo text eol=lf
+
+# Documentation
+*.md text eol=lf
+
+# Binary — do not diff or convert
+*.png binary
+*.flatpak binary
+*.gpg binary

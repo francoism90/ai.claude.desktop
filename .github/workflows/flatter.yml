@@ -1,0 +1,63 @@
+name: Flatter (signed)
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    # Rebuild weekly to catch upstream changes
+    - cron: "0 2 * * 0"
+
+jobs:
+  flatter:
+    name: Build Flatpak Packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    container:
+      image: ghcr.io/andyholmes/flatter/freedesktop:25.08
+      options: --privileged
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup GPG
+        # Skip GPG signing for pull requests (requires secrets from repo owner)
+        if: ${{ github.triggering_actor == github.repository_owner && github.event_name != 'pull_request' }}
+        id: gpg
+        uses: crazy-max/ghaction-import-gpg@v7
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Install SDK Extensions
+        run: |
+          flatpak install --noninteractive flathub org.freedesktop.Sdk.Extension.golang//25.08
+
+      - name: Build Packages
+        uses: andyholmes/flatter@main
+        with:
+          files: |
+            src/ai.claude.desktop/ai.claude.desktop.yml
+          gpg-sign: ${{ steps.gpg.outputs.fingerprint }}
+          upload-pages-artifact: true
+          upload-pages-includes: |
+            index.html
+            README.md
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: flatter
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
