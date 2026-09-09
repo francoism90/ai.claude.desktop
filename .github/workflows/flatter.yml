@@ -68,7 +68,7 @@ jobs:
           cp README.md "${{ steps.flatter.outputs.repository }}/" || true
 
       - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ${{ steps.flatter.outputs.repository }}
 
