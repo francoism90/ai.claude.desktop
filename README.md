@@ -15,6 +15,78 @@ the **host**, not inside the sandbox, via a small Go relay
 
 Supports `x86_64` and `aarch64`.
 
+## Quick Start
+
+Add the remote repository:
+
+```bash
+flatpak remote-add --if-not-exists francoism90-claude-desktop https://francoism90.github.io/ai.claude.desktop/index.flatpakrepo
+```
+
+Update the repository:
+
+```bash
+flatpak update
+```
+
+Install the app:
+
+```bash
+flatpak install francoism90-claude-desktop ai.claude.desktop
+```
+
+> Note: the app will automatically update when you run `flatpak update`.
+
+```bash
+flatpak run ai.claude.desktop
+```
+
+### Build
+
+It is possible to build the app yourself instead of using the prebuilt,
+signed repo above.
+
+```sh
+git clone https://github.com/francoism90/ai.claude.desktop.git
+cd ai.claude.desktop
+./build.sh
+flatpak run ai.claude.desktop
+```
+
+`build.sh` adds the Flathub remote (user), installs the `golang` SDK extension
+needed to build `host-spawn`, builds to a local repo, then installs from that
+repo with the host's own `flatpak` binary (see "Nested-sandbox install error"
+below for why it's split into two steps).
+
+To build manually:
+
+```sh
+cd src/ai.claude.desktop
+flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo \
+  build-dir ai.claude.desktop.yml
+flatpak --user remote-add --if-not-exists ai.claude.desktop-local ./repo --no-gpg-verify
+flatpak --user install --noninteractive ai.claude.desktop-local ai.claude.desktop
+```
+
+#### Nested-sandbox install error
+
+If `flatpak-builder` on your `$PATH` is itself a Flatpak (`org.flatpak.Builder`,
+e.g. on immutable/hardened distros without a native package), running it with
+`--install` directly can fail with:
+
+```
+bwrap: No permissions to create a new namespace, likely because the kernel
+does not allow non-privileged user namespaces.
+Error: Failed to install ai.claude.desktop: ...
+```
+
+That's `org.flatpak.Builder`'s own sandbox trying to nest another `bwrap`
+sandbox for `flatpak install`, which some kernels/hardening policies (this was
+found on secureblue) block regardless of user-namespace permissions otherwise
+being fine. Building to a local repo and installing with the *host's* `flatpak`
+binary — as `build.sh` and the manual steps above do — sidesteps it, since that
+install then only needs one level of sandboxing, not two.
+
 ## Credits
 
 Built on top of two existing Claude Desktop Flatpak projects:
@@ -37,55 +109,14 @@ Repository layout and CI (Flatter signed builds, the daily update checker,
 `bin/create-keys`) are modeled on my own
 [org.freedesktop.Sdk.Extension.podman](https://github.com/francoism90/org.freedesktop.Sdk.Extension.podman).
 
-## Build & install
-
-```sh
-./build.sh
-flatpak run ai.claude.desktop
-```
-
-`build.sh` adds the Flathub remote (user), installs the `golang` SDK extension
-needed to build `host-spawn`, builds to a local repo, then installs from that
-repo with the host's own `flatpak` binary (see "Nested-sandbox install error"
-below for why it's split into two steps).
-
-To build manually:
-
-```sh
-cd src/ai.claude.desktop
-flatpak-builder --user --install-deps-from=flathub --force-clean --repo=repo \
-  build-dir ai.claude.desktop.yml
-flatpak --user remote-add --if-not-exists ai.claude.desktop-local ./repo --no-gpg-verify
-flatpak --user install --noninteractive ai.claude.desktop-local ai.claude.desktop
-```
-
-### Nested-sandbox install error
-
-If `flatpak-builder` on your `$PATH` is itself a Flatpak (`org.flatpak.Builder`,
-e.g. on immutable/hardened distros without a native package), running it with
-`--install` directly can fail with:
-
-```
-bwrap: No permissions to create a new namespace, likely because the kernel
-does not allow non-privileged user namespaces.
-Error: Failed to install ai.claude.desktop: ...
-```
-
-That's `org.flatpak.Builder`'s own sandbox trying to nest another `bwrap`
-sandbox for `flatpak install`, which some kernels/hardening policies (this was
-found on secureblue) block regardless of user-namespace permissions otherwise
-being fine. Building to a local repo and installing with the *host's* `flatpak`
-binary — as `build.sh` and the manual steps above do — sidesteps it, since that
-install then only needs one level of sandboxing, not two.
-
 ## Repository layout
 
 - `src/ai.claude.desktop/` — the manifest, launcher scripts, desktop entry,
   AppStream metainfo, and icons. `flatpak-external-data-checker` and the
   update-checker workflow discover manifests by convention
   (`src/<name>/<name>.yml`).
-- `.github/workflows/flatter.yml` — builds, GPG-signs, and publishes a
-  self-hosted Flatpak repo to GitHub Pages using
+- `.github/workflows/flatter.yml` — builds, GPG-signs, and publishes the
+  signed repo used by "Quick Start" above to GitHub Pages using
   [Flatter](https://github.com/andyholmes/flatter). Runs on push and weekly.
 - `.github/workflows/update-checker.yml` — runs
   [flatpak-external-data-checker](https://github.com/flathub/flatpak-external-data-checker)
@@ -101,8 +132,11 @@ The pinned version and per-arch `sha256`/`size` live in
 carries `x-checker-data` of type `debian-repo`, pointed at Anthropic's own apt
 repo (`downloads.claude.ai/claude-desktop/apt/stable`), so
 `flatpak-external-data-checker` can detect new releases without scraping a
-redirect endpoint. Either let `update-checker.yml` open a PR automatically, or
-run it locally:
+redirect endpoint. `update-checker.yml` runs it daily and opens a PR; merging
+that PR (or pushing to `main` directly) triggers `flatter.yml`, which rebuilds
+and republishes the repo above — no manual build step needed.
+
+To check for updates locally instead:
 
 ```sh
 docker run --rm -v "$PWD:/checker" -w /checker \
@@ -111,23 +145,6 @@ docker run --rm -v "$PWD:/checker" -w /checker \
 git diff
 ./build.sh
 ```
-
-### Enabling self-hosted, signed builds (Flatter)
-
-1. Run `bin/create-keys "Your Name" you@example.com` and add the printed
-   `GPG_PRIVATE_KEY` (and `GPG_PASSPHRASE`, if any) as repository secrets.
-   Delete `private.key` and `flatter-keyring/` locally afterwards — never
-   commit them.
-2. Enable GitHub Pages for this repository (Settings → Pages → Source:
-   GitHub Actions).
-3. Push to `main`, or run the `Flatter (signed)` workflow manually. Once it
-   completes, users can add your repo:
-
-   ```sh
-   flatpak remote-add --if-not-exists ai-claude-desktop \
-     https://<you>.github.io/ai.claude.desktop/index.flatpakrepo
-   flatpak install ai-claude-desktop ai.claude.desktop
-   ```
 
 ## What works / what doesn't
 
