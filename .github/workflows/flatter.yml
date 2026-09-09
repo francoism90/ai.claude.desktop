@@ -45,15 +45,32 @@ jobs:
             org.electronjs.Electron2.BaseApp//25.08
 
       - name: Build Packages
+        id: flatter
         uses: andyholmes/flatter@main
         with:
           files: |
             src/ai.claude.desktop/ai.claude.desktop.yml
           gpg-sign: ${{ steps.gpg.outputs.fingerprint }}
-          upload-pages-artifact: true
-          upload-pages-includes: |
-            index.html
-            README.md
+          # Uploaded ourselves below, after patching in --runtime-repo:
+          # Flatter's own build-update-repo call only ever passes
+          # --gpg-sign, so a fresh install from our repo alone fails with
+          # "requires the runtime org.freedesktop.Platform/x86_64/25.08
+          # which was not found" - flatpak has no other remote to check.
+          upload-pages-artifact: false
+
+      - name: Point installs at Flathub for missing runtimes
+        env:
+          FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
+        run: |
+          args=(--runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo)
+          [ -n "$FINGERPRINT" ] && args+=(--gpg-sign="$FINGERPRINT")
+          flatpak build-update-repo "${args[@]}" "${{ steps.flatter.outputs.repository }}"
+          cp README.md "${{ steps.flatter.outputs.repository }}/" || true
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ steps.flatter.outputs.repository }}
 
   deploy:
     name: Deploy
