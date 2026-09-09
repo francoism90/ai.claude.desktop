@@ -9,6 +9,9 @@ build-dir/
 dist/repo
 flatpak_app/
 flatter-keyring/
+node_modules
+oci-bundle/
+package-lock.json
 private.key
 repo/
 Thumbs.db
