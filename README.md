@@ -17,7 +17,15 @@ Supports `x86_64` and `aarch64`.
 
 ## Quick Start
 
-Add the remote repository:
+This repo only ever contains `ai.claude.desktop` itself - the `org.freedesktop.Platform`
+runtime and `org.electronjs.Electron2.BaseApp` it's built on come from Flathub, same as
+for any third-party single-app repo. If you don't have Flathub added yet:
+
+```bash
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+```
+
+Add this remote repository:
 
 ```bash
 flatpak remote-add --if-not-exists francoism90-claude-desktop https://francoism90.github.io/ai.claude.desktop/index.flatpakrepo
