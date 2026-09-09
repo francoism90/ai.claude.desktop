@@ -40,6 +40,9 @@
     <content_attribute id="social-chat">moderate</content_attribute>
   </content_rating>
   <releases>
+    <release version="1.49585.0" date="2026-09-09">
+      <description></description>
+    </release>
     <release version="1.46388.2" date="2026-09-09">
       <description>
         <p>Repackages Anthropic's official Linux build 1.46388.2.</p>
